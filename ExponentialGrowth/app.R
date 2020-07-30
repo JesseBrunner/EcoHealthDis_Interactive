@@ -12,9 +12,22 @@ library(tidyverse)
 library(scales)
 
 # Pre-Shiny stuff
-makeDF <- function(r){
-    tibble(Time = 0:50,
+makeDF <- function(r, t_intervene=50){
+    df <- tibble(Time = 0:50,
            N = 1*exp(r*Time))
+    # if there is an intervention, add a new column
+    if(t_intervene < 50) {
+        df <- df %>%
+            mutate( N_intervention =
+                        1*exp(r*t_intervene) +
+                        ifelse(Time < t_intervene,
+                               exp(r*t_intervene)*(exp(r*(Time-t_intervene))-1),
+                               exp(r*t_intervene)*(exp((r/2)*(Time-t_intervene))-1)
+                        )
+                    )
+    }
+
+    return(df)
 }
 
 # Define UI for application that draws a histogram
@@ -27,14 +40,19 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             sliderInput("r",
-                        "value of r (intrinsic growth rate):",
+                        "Value of r (intrinsic growth rate):",
                         min = 0.05,
                         max = 0.5,
-                        value = 0.15),
+                        value = 0.25),
             radioButtons("yaxis",
                          "Y axis",
-                        c("Linear"="liny",
-                          "Logarithmic"="logy")),
+                         c("Linear"="liny",
+                           "Logarithmic"="logy")),
+            sliderInput("t_intervene",
+                        "An intervention cutting r in half starts at:",
+                        min = 5,
+                        max = 50,
+                        value = 50),
             withMathJax(p("This graph shows the dynamics of exponential population growth over time. The underlying equestion is:")),
             p("$$ N(t) = N(0)e^{rt},$$"),
             withMathJax(p("where \\(r\\) is the intrinsic growth rate and \\(N(0)\\) is the initial population size")),
@@ -43,8 +61,8 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-           plotOutput("expPlot"),
-           tableOutput("expTable")
+            plotOutput("expPlot"),
+            tableOutput("expTable")
         )
     )
 )
@@ -55,7 +73,7 @@ server <- function(input, output) {
 
 
     output$expPlot <- renderPlot({
-        df <- makeDF(input$r)
+        df <- makeDF(input$r, input$t_intervene)
 
         P <- ggplot(df, aes(Time, N)) +
             geom_line() +
@@ -63,19 +81,32 @@ server <- function(input, output) {
             theme_minimal() +
             coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
 
+        # get the right y-axis
         switch(input$yaxis,
-               "liny" = plot(P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))),
-               "logy" = plot(P+
+               "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
+               "logy" = {P <- P+
                                  scale_y_log10("N(t)", labels = label_comma(accuracy=1),
-                                               breaks = 10^c(0:15)))
-               )
+                                               breaks = 10^c(0:15))}
+        )
+
+        # add in the intervention if needed
+        if(input$t_intervene < max(df$Time)) {P <- P + geom_line(aes(y=N_intervention), color = "blue")}
+
+        plot(P)
 
     })
 
     output$expTable <- renderTable({
-        arrange( makeDF(input$r), desc(Time))
-        },
-        digits=1)
+        df <- makeDF(input$r, input$t_intervene)
+        # format table to use commas in numbers
+        df$N <- comma(df$N, accuracy = 0.1)
+        # do the same to the intervention column if present
+        if(input$t_intervene < max(df$Time)) {
+            df$N_intervention <- comma(df$N_intervention, accuracy = 0.1)
+            }
+        arrange( df, desc(Time))
+    },
+    digits=1, align = "r")
 }
 
 # Run the application
