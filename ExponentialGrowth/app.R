@@ -14,18 +14,14 @@ library(scales)
 # Pre-Shiny stuff
 makeDF <- function(r, t_intervene=50){
     df <- tibble(Time = 0:50,
-           N = 1*exp(r*Time))
-    # if there is an intervention, add a new column
-    if(t_intervene < 50) {
-        df <- df %>%
-            mutate( N_intervention =
-                        1*exp(r*t_intervene) +
-                        ifelse(Time < t_intervene,
-                               exp(r*t_intervene)*(exp(r*(Time-t_intervene))-1),
-                               exp(r*t_intervene)*(exp((r/2)*(Time-t_intervene))-1)
-                        )
-                    )
-    }
+                 N = 1*exp(r*Time),
+                 N_intervention =
+                     1*exp(r*t_intervene) +
+                     ifelse(Time < t_intervene,
+                            exp(r*t_intervene)*(exp(r*(Time-t_intervene))-1),
+                            exp(r*t_intervene)*(exp((r/2)*(Time-t_intervene))-1)
+                     )
+    )
 
     return(df)
 }
@@ -48,21 +44,30 @@ ui <- fluidPage(
                          "Y axis",
                          c("Linear"="liny",
                            "Logarithmic"="logy")),
-            sliderInput("t_intervene",
-                        "An intervention cutting r in half starts at:",
-                        min = 5,
-                        max = 50,
-                        value = 50),
             withMathJax(p("This graph shows the dynamics of exponential population growth over time. The underlying equestion is:")),
             p("$$ N(t) = N(0)e^{rt},$$"),
-            withMathJax(p("where \\(r\\) is the intrinsic growth rate and \\(N(0)\\) is the initial population size")),
-            p("Try adjusting \\(r\\) so that the line hits the point")
+            withMathJax(p("where \\(r\\) is the intrinsic growth rate and \\(N(0)\\) is the initial population size"))
         ),
 
-        # Show a plot of the generated distribution
         mainPanel(
-            plotOutput("expPlot"),
-            tableOutput("expTable")
+            tabsetPanel(type = "tabs",
+                        tabPanel("Exponential growth",
+                                 p("Try adjusting \\(r\\) so that the line hits the point."),
+                                 plotOutput("expPlot"),
+                                 tableOutput("expTable")
+                        ),
+                        tabPanel("Intervening",
+                                 p("Imagine that somewhere along the time series there is an intervention that reduces \\(r\\) by half. See how changing when the intervention occurs changes the"),
+                                 sliderInput("t_intervene",
+                                             "An intervention cutting r in half starts at:",
+                                             min = 5,
+                                             max = 50,
+                                             value = 50),
+                                 plotOutput("intPlot"),
+                                 tableOutput("intTable")
+
+                        )
+            )
         )
     )
 )
@@ -89,8 +94,27 @@ server <- function(input, output) {
                                                breaks = 10^c(0:15))}
         )
 
-        # add in the intervention if needed
-        if(input$t_intervene < max(df$Time)) {P <- P + geom_line(aes(y=N_intervention), color = "blue")}
+        plot(P)
+
+    })
+
+    output$intPlot <- renderPlot({
+        df <- makeDF(input$r, input$t_intervene)
+
+        P <- ggplot(df, aes(Time, N)) +
+            geom_line() +
+            geom_line(aes(y=N_intervention), color = "blue") +
+            geom_point(data=tibble(Time=40, N=10^5))+
+            theme_minimal() +
+            coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
+
+        # get the right y-axis
+        switch(input$yaxis,
+               "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
+               "logy" = {P <- P+
+                   scale_y_log10("N(t)", labels = label_comma(accuracy=1),
+                                 breaks = 10^c(0:15))}
+        )
 
         plot(P)
 
@@ -100,10 +124,15 @@ server <- function(input, output) {
         df <- makeDF(input$r, input$t_intervene)
         # format table to use commas in numbers
         df$N <- comma(df$N, accuracy = 0.1)
-        # do the same to the intervention column if present
-        if(input$t_intervene < max(df$Time)) {
-            df$N_intervention <- comma(df$N_intervention, accuracy = 0.1)
-            }
+        arrange( df, desc(Time))
+    },
+    digits=1, align = "r")
+
+    output$intTable <- renderTable({
+        df <- makeDF(input$r, input$t_intervene)
+        # format table to use commas in numbers
+        df$N <- comma(df$N, accuracy = 0.1)
+        df$N_intervention <- comma(df$N_intervention, accuracy = 0.1)
         arrange( df, desc(Time))
     },
     digits=1, align = "r")
