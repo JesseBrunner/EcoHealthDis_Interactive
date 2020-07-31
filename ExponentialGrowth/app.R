@@ -11,6 +11,15 @@ library(shiny)
 library(tidyverse)
 library(scales)
 
+# Data import
+Congo <- read_csv("data/Ebola_Congo_1995.csv")
+Congo <- Congo %>%
+    mutate(Cumulative = cumsum(Cases)) %>%
+    filter(Day >=7)
+Uganda <- read_csv("data/Ebola_Uganda_2000.csv")
+Uganda <- Uganda %>%
+    mutate(Cumulative = cumsum(Cases))
+
 # Pre-Shiny stuff
 makeDF <- function(r, t_intervene=50){
     df <- tibble(Time = 0:50,
@@ -51,11 +60,15 @@ ui <- fluidPage(
 
         mainPanel(
             tabsetPanel(type = "tabs",
+
+
                         tabPanel("Exponential growth",
                                  p("Try adjusting \\(r\\) so that the line hits the point."),
                                  plotOutput("expPlot"),
                                  tableOutput("expTable")
                         ),
+
+
                         tabPanel("Intervening",
                                  p("Imagine that somewhere along the time series there is an intervention that reduces \\(r\\) by half. See how changing when the intervention occurs changes the"),
                                  sliderInput("t_intervene",
@@ -66,7 +79,25 @@ ui <- fluidPage(
                                  plotOutput("intPlot"),
                                  tableOutput("intTable")
 
+                        ),
+
+
+                        tabPanel("Ebola outbreaks",
+                                 p("These are data on the cumulative onset of Ebola disease in two outbreaks. In both cases there was an intervention at some point in time."),
+                                 p("This panel fits a linear regression to the data up to the intervention start date (value in slider) and then projects that line forward."),
+                                 p("See if you can guess when that intervention started. (Note that unlike our simple example in the previous tab, interventions do not happen instantaneously everywhere, so it may not look sudden.)"),
+                                 radioButtons("dataset",
+                                              "Data set",
+                                              c("Congo 1995"="Congo",
+                                                "Uganda 2000"="Uganda")),
+                                 sliderInput("cutoff",
+                                             "Intervention started at day:",
+                                             min = 20,
+                                             max = 100,
+                                             value = 50),
+                                 plotOutput("ebolaPlot")
                         )
+
             )
         )
     )
@@ -93,10 +124,9 @@ server <- function(input, output) {
                                  scale_y_log10("N(t)", labels = label_comma(accuracy=1),
                                                breaks = 10^c(0:15))}
         )
-
         plot(P)
-
     })
+
 
     output$intPlot <- renderPlot({
         df <- makeDF(input$r, input$t_intervene)
@@ -115,10 +145,9 @@ server <- function(input, output) {
                    scale_y_log10("N(t)", labels = label_comma(accuracy=1),
                                  breaks = 10^c(0:15))}
         )
-
         plot(P)
-
     })
+
 
     output$expTable <- renderTable({
         df <- makeDF(input$r, input$t_intervene)
@@ -136,6 +165,43 @@ server <- function(input, output) {
         arrange( df, desc(Time))
     },
     digits=1, align = "r")
+
+    output$ebolaPlot <- renderPlot({
+
+        switch(input$dataset,
+               "Congo" = {df <- Congo},
+               "Uganda" = {df <- Uganda})
+
+        cutoff <- input$cutoff # choose cutoff
+
+
+        P <- ggplot(df, aes(x=Day, y=Cumulative)) +
+            geom_point() +
+            geom_smooth(method="lm",
+                        data=filter(df, Day <= cutoff),
+                        fullrange=TRUE, se=F, linetype=2) +
+            geom_smooth(method="lm",
+                        data=filter(df, Day <= cutoff)) +
+            scale_x_continuous("Days since first case", breaks = 10*0:16)
+
+        # get the right y-axis
+        switch(input$yaxis,
+               "liny" = {P <- P +
+                   scale_y_continuous("Cumulative number of cases",
+                                      labels = label_comma(accuracy=1),
+                                      limits=c(0, max(df$Cumulative)*1.2)
+                   )},
+               "logy" = {P <- P +
+                   scale_y_log10("Cumulative number of cases",
+                                 labels = label_comma(accuracy=1),
+                                 breaks = 10^c(0:15),
+                                 limits=c(1, max(df$Cumulative)*2)
+                   )}
+        )
+
+        plot(P)
+
+    })
 }
 
 # Run the application
