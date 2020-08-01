@@ -11,6 +11,9 @@ library(shiny)
 library(tidyverse)
 library(scales)
 
+theme_set(theme_minimal())
+
+
 # Data import
 Congo <- read_csv("data/Ebola_Congo_1995.csv")
 Congo <- Congo %>%
@@ -106,15 +109,13 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-
-
+    # Tab 1: Exponential growth
     output$expPlot <- renderPlot({
         df <- makeDF(input$r, input$t_intervene)
 
         P <- ggplot(df, aes(Time, N)) +
             geom_line() +
             geom_point(data=tibble(Time=40, N=10^5))+
-            theme_minimal() +
             coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
 
         # get the right y-axis
@@ -127,7 +128,15 @@ server <- function(input, output) {
         plot(P)
     })
 
+    output$expTable <- renderTable({
+        df <- makeDF(input$r, input$t_intervene)
+        # format table to use commas in numbers
+        df$N <- comma(df$N, accuracy = 0.1)
+        arrange( df, desc(Time))
+    },
+    digits=1, align = "r")
 
+    # Tab 2: Intervention in exponential growth
     output$intPlot <- renderPlot({
         df <- makeDF(input$r, input$t_intervene)
 
@@ -135,7 +144,6 @@ server <- function(input, output) {
             geom_line() +
             geom_line(aes(y=N_intervention), color = "blue") +
             geom_point(data=tibble(Time=40, N=10^5))+
-            theme_minimal() +
             coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
 
         # get the right y-axis
@@ -148,15 +156,6 @@ server <- function(input, output) {
         plot(P)
     })
 
-
-    output$expTable <- renderTable({
-        df <- makeDF(input$r, input$t_intervene)
-        # format table to use commas in numbers
-        df$N <- comma(df$N, accuracy = 0.1)
-        arrange( df, desc(Time))
-    },
-    digits=1, align = "r")
-
     output$intTable <- renderTable({
         df <- makeDF(input$r, input$t_intervene)
         # format table to use commas in numbers
@@ -166,13 +165,30 @@ server <- function(input, output) {
     },
     digits=1, align = "r")
 
+
+    # Tab 3 Ebola outbreaks
     output$ebolaPlot <- renderPlot({
 
         switch(input$dataset,
                "Congo" = {df <- Congo},
                "Uganda" = {df <- Uganda})
 
+        # get right y-values
+        df <- df %>%
+            mutate(y = Cumulative)
+        if(input$yaxis == "logy") {
+            df <- df %>%
+            mutate(y = log(Cumulative))
+        }
+
         cutoff <- input$cutoff # choose cutoff
+
+        # fit regression & get slope and standard error
+        regr <- summary(
+            lm(y ~ Day, data = filter(df, Day <= cutoff))
+            )$coefficients["Day", 1:2]
+        regr <- round(regr, 3)
+
 
 
         P <- ggplot(df, aes(x=Day, y=Cumulative)) +
@@ -182,7 +198,9 @@ server <- function(input, output) {
                         fullrange=TRUE, se=F, linetype=2) +
             geom_smooth(method="lm",
                         data=filter(df, Day <= cutoff)) +
-            scale_x_continuous("Days since first case", breaks = 10*0:16)
+            scale_x_continuous("Days since first case", breaks = 10*0:16) +
+            annotate("text", x=10, y=max(df$Cumulative),
+                     label = bquote(slope == .(regr[1]) %+-% .(regr[2])), hjust=0 )
 
         # get the right y-axis
         switch(input$yaxis,
@@ -195,13 +213,15 @@ server <- function(input, output) {
                    scale_y_log10("Cumulative number of cases",
                                  labels = label_comma(accuracy=1),
                                  breaks = 10^c(0:15),
-                                 limits=c(1, max(df$Cumulative)*2)
+                                 limits=c(1, max(df$Cumulative)*3)
                    )}
         )
 
         plot(P)
 
     })
+
+
 }
 
 # Run the application
