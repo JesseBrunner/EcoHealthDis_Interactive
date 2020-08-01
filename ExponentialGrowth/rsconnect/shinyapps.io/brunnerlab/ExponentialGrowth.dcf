@@ -1,0 +1,12 @@
+name: ExponentialGrowth
+title: ExponentialGrowth
+username:
+account: brunnerlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2631015
+bundleId: 3460373
+url: https://brunnerlab.shinyapps.io/ExponentialGrowth/
+when: 1596218501.09423
+asMultiple: FALSE
+asStatic: FALSE
