@@ -10,10 +10,11 @@
 library(shiny)
 library(tidyverse)
 library(scales)
+library(ggrepel)
 library(grid)
 library(gridExtra)
 library(simecol)
-
+library(diagram)
 
 theme_set(theme_minimal())
 
@@ -36,65 +37,94 @@ SEIR <- odeModel(
 
             dS <- -beta*S*I/N
             dE <-  beta*S*I/N  -k*E
-            dI <-               k*E -gamma*I
-            dR <-                    gamma*I
+            dI <-               k*E        -gamma*I
+            dR <-                    (1-CM)*gamma*I
+            dD <-                       CM *gamma*I
             dC <-               k*E
-            list(c(dS, dE, dI, dR, dC))
+            list(c(dS, dE, dI, dR, dD, dC))
         })
     },
     solver = "rk4" # the function that does the solving
 )
 
 
+# function to plot epidemics
+plotEpi <- function(df){
+    max_time <- max(df$time)
+
+    ggplot(df, aes(x=time, y=Number, color = Box)) + # construct the plot
+        geom_line() +
+        scale_y_continuous("Number in each class",
+                           labels = label_comma(accuracy=1)) +
+        geom_text_repel(data=filter(df, time == max_time), aes(label = Box),
+                        hjust = 0, nudge_x = 0.5,
+                        direction = "y") +
+        theme(legend.position = "null") +
+        coord_cartesian(xlim = c(0, max_time*1.1))
+}
 
 
 # Define UI f
 ui <- fluidPage(
-
+    withMathJax(),
     # Application title
     titlePanel("Compartment epidemic models"),
 
     # Sidebar with a slider input for number of bins
     sidebarLayout(
+
         sidebarPanel(
+
             sliderInput("beta",
-                        "Value of transmission parameter, \\(\\beta\\):",
+                        "Transmission parameter \\(\\beta\\)",
                         min = 0.1,
                         max = 0.5,
                         value = 0.25),
             sliderInput("incubation",
-                        "Incubation time (1/k):",
-                        min = 0,
+                        "Incubation period in days (1/\\(k\\), in SEIR):",
+                        min = 0.5,
                         max = 10,
-                        value = 5),
-
+                        value = 0.5),
             sliderInput("infectPeriod",
-                        "Infectious period (1/gamma):",
-                        min = 0,
+                        "Infectious period in days (1/\\(\\gamma\\)):",
+                        min = 0.5,
                         max = 10,
                         value = 5),
-            sliderInput("N0",
-                        "Population size:",
-                        min = 100,
-                        max = 100000,
-                        value = 1000),
+            sliderInput("caseMort",
+                        "Case fatality rate (proportion):",
+                        min=0, max=1,
+                        value = 0.1),
+
+            shinyWidgets::sliderTextInput("N0",
+                                          "Population size (\\(N_0\\)):",
+                                          choices=c(10^2, 10^3, 10^4, 10^5, 10^6),
+                                          selected=1000, grid = T),
             sliderInput("I0",
-                        "Initial number infected:",
+                        "Initial number infected (\\(I_0\\)):",
                         min = 1,
                         max = 10,
                         value = 1),
             sliderInput("timespan",
                         "Time over which to simulate:",
-                        min = 10,
-                        max = 100,
-                        value = 50),
+                        min = 100,
+                        max = 500,
+                        value = 20),
+
+            withMathJax( p("\\(R_0\\) = ")),
+            textOutput("R0")
 
 
         ),
 
-        # Show a plot of the generated distribution
+        # Show a plots
         mainPanel(
-           plotOutput("seirPlot")
+
+            checkboxInput("includeS",
+                         "Plot the susceptible class?",
+                         value = FALSE),
+            plotOutput("seirPlots",
+                       height = "600px"),
+            plotOutput("boxArrows", height = "250px")
         )
     )
 )
@@ -102,26 +132,82 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$seirPlot <- renderPlot({
-        # choose inits, pars, etc.
-        inits <- c(S=input$N0-input$I0, E=0, I=input$I0, R=0, C=1)
-        timespan <- c(from=0, to=input$timespan, by=1)
-        pars <- c(beta = input$beta, k=1/input$incubation, gamma = 1/input$infectPeriod)
+    output$R0 <- renderText({
+        input$beta*input$infectPeriod
+    })
+
+    output$boxArrows <- renderPlot({
+        openplotmat(asp=1/2)
+        # pos <- coordinates(c(7))
+        straightarrow(c(0.1, 0.65), c(0.28, 0.65), arr.pos = 1)
+        straightarrow(c(0.4, 0.65), c(0.58, 0.65), arr.pos = 1)
+        # curvedarrow(c(0.45, 0.5), c(0.16, 0.5), arr.pos = 0.9, curve=0.8, endhead = TRUE)
+        straightarrow(c(0.75, 0.65), c(0.87, 0.65), arr.pos = 1)
+        straightarrow(c(0.66, 0.5), c(0.66, 0.2), arr.pos = 1)
 
 
-        # set parameters
-        parms(SEIR) <- pars
-        init(SEIR) <- inits
-        times(SEIR) <- timespan
+        textrect(c(0.05, 0.65), lab ="S", radx = 0.05, rady = 0.1, cex = 2)
+        textrect(c(0.36, 0.65), lab ="E", radx = 0.05, rady = 0.1, cex = 2)
+        textrect(c(0.66, 0.65), lab ="I", radx = 0.05, rady = 0.1, cex = 2)
+        textrect(mid=c(0.95, 0.65), lab ="R",  radx = 0.05, rady = 0.1, cex = 2)
+        textplain(mid=c(0.66, 0.06), lab ="Dead",  cex = 1.2)
 
-        SEIR <- sim(SEIR)
+        textplain(mid=c(0.2, 0.85),
+                  lab = expression(beta*frac(I,N)*S), cex=1)
+        textplain(mid=c(0.5, 0.85),
+                  lab = expression(k*E), cex=1)
+        textplain(mid=c(0.8, 0.85),
+                  lab = expression((1-phi)*gamma*I), cex=1)
+        textplain(mid=c(0.7, 0.35),
+                  lab = expression(phi*gamma*I), cex=1)
+    })
 
-        out(SEIR) %>% # get the output from the model
-            filter(time >=0) %>%
-            select(-S) %>%
+    output$seirPlots <- renderPlot({
+
+        # get/set inits, pars, etc.
+        init(SEIR)  <- c(S=input$N0-input$I0, E=0, I=input$I0, R=0, D=0, C=input$I0)
+        times(SEIR) <- c(from=0, to=input$timespan, by=1/4)
+        parms(SEIR) <- c(beta = input$beta,
+                         k=1/input$incubation,
+                         gamma = 1/input$infectPeriod,
+                         CM = input$caseMort)
+
+        df <- out(sim(SEIR)) %>% # get the output from the model
+            filter(time >=0) # in case start before zero
+
+
+        # Graph of epidemic, boxes by time
+        df_epi <- df %>%
             gather(key=Box, value=Number, -time) %>%
-            ggplot(., aes(x=time, y=Number, color = Box)) + # construct the plot
-            geom_line()
+            mutate(Box = factor(Box,
+                                labels = c("Cases", "Dead", "Exposed", "Infected", "Recovered", "Susceptible")))
+
+        if(!input$includeS) {df_epi <- filter(df_epi, Box != "Susceptible")}
+
+        # get plot of epidemic
+        P_epi <- plotEpi(df = df_epi)
+
+        # graph of rates during epidemic through time
+        df_rates <- df %>%
+            mutate(Transmission = input$beta*S*I/(S+E+I+R),
+                   Recovery = (1-input$caseMort)*E/input$infectPeriod,
+                   Death = input$caseMort*E/input$infectPeriod
+                   ) %>%
+            select(time, Transmission, Recovery, Death) %>%
+            gather(key = "Process", value = "Rate", -time)
+
+        df_labr <- filter(df_rates, time == max(time)) # for rate labels
+
+        P_rate <- ggplot(df_rates, aes(x=time, y=Rate, color = Process)) +
+            geom_line() +
+            geom_text_repel(data=df_labr, aes(label = Process),
+                            hjust = 0, nudge_x = 0.5,
+                            direction = "y") +
+            theme(legend.position = "null") +
+            coord_cartesian(xlim = c(0, max(df_rates$time)*1.1))
+
+        grid.arrange(P_epi, P_rate, ncol=1,
+                     layout_matrix = rbind(c(1,1), c(1,1), c(1,1), c(2,2)))
 
     })
 }
