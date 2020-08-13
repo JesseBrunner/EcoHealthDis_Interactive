@@ -7,6 +7,15 @@
 #    http://shiny.rstudio.com/
 #
 
+
+
+#
+# THINGS TO HAVE THEM DO WITH SHINY MODEL
+#
+# * Change parameters and initial variable to see if they can make epidemic not happen (Fizzle) or be more severe (fewer R at end) by playing with contact rate, recovery rate, and virulence; S0
+# * At the end ask why, if epidemics eventually die-out, do we see persistent, endemic disease.
+
+
 library(shiny)
 library(tidyverse)
 library(scales)
