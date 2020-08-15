@@ -3,7 +3,7 @@ library(simecol)
 
 
 # The model
-SEIR <- odeModel(
+SEIR_ebola <- odeModel(
   main = function (time, init, parms, ...) {
     # (1) unpack variables
     S <- init["S"]
@@ -16,6 +16,8 @@ SEIR <- odeModel(
 
     with(as.list(parms),  {
       # Model from Chowell et al. 2004 The basic reproductive number of Ebola and the effects of public health measures: the cases of Congo and Uganda. Journal of Theoretical Biology 229:119-126.
+
+      beta <- ifelse(time <= T_inter, beta, beta1 + (beta-beta1)*exp(-q*(time-T_inter)))
 
       dS <- -beta*S*I/N
       dE <-  beta*S*I/N  -k*E
@@ -35,8 +37,8 @@ Congo <- Congo %>%
   mutate(Cumulative = cumsum(Cases)) %>%
   filter(Day >=7)
 
-parms_congo <- c(beta=0.33, k=1/5.3, gamma=1/5.61)
-inits_congo <- c(S=5364500, E=1, I=0, R=0, C=1)
+parms_congo <- c(beta=0.33, beta1 = 0.09, q=log(2)/0.71, T_inter=56+7, k=1/5.3, gamma=1/5.61)
+inits_congo <- c(S=5364500, E=, I=1, R=0, C=1)
 times_congo = c(from=-7, to=128, by=1) #by=step size
 
 
@@ -44,7 +46,7 @@ times_congo = c(from=-7, to=128, by=1) #by=step size
 Uganda <- read_csv("Ebola_Uganda_2000.csv")
 Uganda <- Uganda %>%
   mutate(Cumulative = cumsum(Cases))
-parms_uganda <- c(beta=0.4, k=1/3.35, gamma=1/3.5)
+parms_uganda <- c(beta=0.4, beta1 = 0.19, q=log(2)/0.11, T_inter=56, k=1/3.35, gamma=1/3.5)
 inits_uganda <- c(S=1867200, E=0, I=3, R=4, C=7)
 times_uganda = c(from=0, to=133, by=1) #by=step size
 
@@ -70,4 +72,4 @@ out(SEIR) %>% # get the output from the model
   filter(time >=0) %>%
   ggplot(., aes(x=time, y=C)) + # construct the plot
   geom_line() +
-  geom_point(data=df, aes(Day, Cumulative)) + scale_y_log10()
+  geom_point(data=df, aes(Day, Cumulative))
