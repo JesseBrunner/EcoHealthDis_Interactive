@@ -55,7 +55,8 @@ ui <- fluidPage(
             radioButtons("yaxis",
                          "Y axis",
                          c("Linear"="liny",
-                           "Logarithmic"="logy")),
+                           "Logarithmic (base 10)"="logy",
+                           "Logarithmic (natural log)" = "lny")),
             withMathJax(p("This graph shows the dynamics of exponential population growth over time. The underlying equestion is:")),
             p("$$ N(t) = N(0)e^{rt},$$"),
             withMathJax(p("where \\(r\\) is the intrinsic growth rate and \\(N(0)\\) is the initial population size"))
@@ -123,7 +124,11 @@ server <- function(input, output) {
                "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
                "logy" = {P <- P+
                                  scale_y_log10("N(t)", labels = label_comma(accuracy=1),
-                                               breaks = 10^c(0:15))}
+                                               breaks = 10^c(0:15))},
+               "lny" = {P <- P + scale_y_continuous("N(t)",
+                                                    trans = log_trans(),
+                                                    labels = label_comma(accuracy=1),
+                                                    breaks = 10^c(0:15))}
         )
         plot(P)
     })
@@ -151,7 +156,10 @@ server <- function(input, output) {
                "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
                "logy" = {P <- P+
                    scale_y_log10("N(t)", labels = label_comma(accuracy=1),
-                                 breaks = 10^c(0:15))}
+                                 breaks = 10^c(0:15))},
+               "lny" = {P <- P + scale_y_continuous("N(t)", trans = log_trans(),
+                                                    labels = label_comma(accuracy=1),
+                                                    breaks = 10^c(0:15))}
         )
         plot(P)
     })
@@ -214,7 +222,12 @@ server <- function(input, output) {
                                  labels = label_comma(accuracy=1),
                                  breaks = 10^c(0:15),
                                  limits=c(1, max(df$Cumulative)*3)
-                   )}
+                   )},
+               "lny" = {P <- P + scale_y_continuous("Cumulative number of cases",
+                                                    trans = log_trans(),
+                                                    labels = label_comma(accuracy=1),
+                                                    breaks = 10^c(0:15),
+                                                    limits=c(1, max(df$Cumulative)*3))}
         )
 
         plot(P)
