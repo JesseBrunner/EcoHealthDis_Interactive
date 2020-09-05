@@ -12,6 +12,7 @@ library(tidyverse)
 library(scales)
 library(grid)
 library(gridExtra)
+library(ggrepel)
 
 theme_set(theme_minimal())
 
@@ -27,14 +28,37 @@ Uganda <- Uganda %>%
 
 # Pre-Shiny stuff
 makeDF <- function(r, k, timeSpan = 50, N0=1){
-    df <- expand.grid(Time = seq(0,timeSpan, length.out=201), N0=N0)
-    df <- df %>% mutate(
-        Exponential = N0*exp(r*Time),
-        Logistic = k/(1+(k/N0 -1)*exp(-r*Time))
+    labTimes <- round( timeSpan/5 * (0:5) )
+
+    df <- expand.grid(Time = c(seq(0, timeSpan, length.out=201),
+                               labTimes),
+                      N0=N0)
+    df$LabTimes <- NA
+    df$LabTimes[(nrow(df)-5):nrow(df)] <- letters[1:6]
+
+    df_e <- df %>% mutate(
+        # Calculate pop sizes
+        N = N0*exp(r*Time),
+        # Calcuate growth rates
+        Growth = N*r,
+        PerCapita = Growth/N,
+
+        # label
+        Model = "Exponential"
     )
 
-    df <- df %>%
-        gather(key="Model", value="N", Exponential, Logistic)
+    df_l <- df %>% mutate(
+        # Calculate pop sizes
+        N = k/(1+(k/N0 -1)*exp(-r*Time)),
+        # Calcuate growth rates
+        Growth = N*r*(1-N/k),
+        PerCapita = Growth/N,
+        # label
+        Model = "Logistic"
+    )
+
+
+    df <- bind_rows(df_e, df_l)
 
     return(df)
 }
@@ -56,8 +80,8 @@ ui <- fluidPage(
                         step = 0.005),
             sliderInput("k",
                         "Value of k (\"carrying capacity\"):",
-                        min = 100,
-                        max = 5*10^3,
+                        min = 200,
+                        max = 4*10^3,
                         value = 10^3,
                         step = 10),
             checkboxGroupInput("N0s",
@@ -83,7 +107,6 @@ ui <- fluidPage(
 
         mainPanel(
             tabsetPanel(type = "tabs",
-
 
                         tabPanel("Logistic vs. exponential",
                                  p("There are three plots. The first shows the population size through time while the second and third show population and per capita growth rates as a function of population size. Be sure to read the axes!"),
@@ -114,16 +137,14 @@ server <- function(input, output) {
     output$modPlots <- renderPlot({
         df <- makeDF(r=input$r, k=input$k, timeSpan=input$timeSpan, N0=as.numeric(input$N0s))
 
-        # Calcuate growth rates
-        df <- df %>%
-            group_by(Model) %>%
-            mutate(Growth = (lead(N)-N)/(lead(Time)-Time),
-                   PerCapita = Growth/((N+lead(N))/2)
-            )
 
         # Population size by time
         P <- ggplot(df, aes(Time, N, color = Model, group=interaction(Model, N0))) +
             geom_line() +
+            geom_point(data=unique(filter(df, !is.na(LabTimes))) ) +
+            geom_text_repel(data=unique(filter(df, !is.na(LabTimes))),
+                            aes(label = LabTimes),
+                            alpha=1/2) +
             coord_cartesian(ylim=c(1, 7500) )
 
         # get the right y-axis
@@ -137,53 +158,37 @@ server <- function(input, output) {
 
         # Population growth by N
 
-        # find points to plot arrows along curves... 21 points through time
-        timePoints <-  df$Time[10*0:20 + 1] # depends on length.out = 201 in data frame
-        df_points <- filter(df, Time %in% timePoints)
-
-
-
-        df2 <- tibble(N = seq(0, 7500, length.out = 201),
-                      Exponential = input$r*N,
-                      Logistic = input$r*N*(1-N/input$k)) %>%
-            gather(key="Model", value="Growth", Exponential, Logistic)
-
-        Q <- ggplot(df2, aes(N, Growth, color = Model)) +
+        Q <- ggplot(df, aes(N, Growth, color = Model)) +
             geom_hline(yintercept=0, color="darkgrey") +
             geom_line() +
-            geom_segment(data = df_points, aes(x=N, xend=lead(N),
-                                               y=Growth, yend=lead(Growth)),
-                         arrow=arrow(length = unit(2, "mm")),
-                         size=1/2, alpha = 1/2) +
-            # geom_text(data = filter(df, Time %in% timePoints),
-            #           aes(label=round(Time)),
-            #           nudge_x = 1, nudge_y = 1) +
+            geom_point(data=unique(filter(df, !is.na(LabTimes))) ) +
+            geom_text_repel(data=unique(filter(df, !is.na(LabTimes))),
+                            aes(label = LabTimes),
+                            alpha=1/2,
+                            direction="y")  +
             scale_x_continuous("N(t)", labels = comma,
                                lim=c(0,5000)) +
             scale_y_continuous("Population growth rate (dN/dt)",
                                labels = comma,
-                               lim=c(-25,750)) +
-            labs(caption = "Arrows show trajectory over time in 20 steps. (Not all may show up)")
+                               lim=c(-250,750)) +
+            labs(caption = "Labels are six time points along sequence. (Not all may show up)")
 
         # plot(Q)
-        df3 <- tibble(N = seq(0, 7500, length.out = 201),
-                      Exponential = input$r,
-                      Logistic = input$r*(1-N/input$k)) %>%
-            gather(key="Model", value="PerCapita", Exponential, Logistic)
 
-        R <- ggplot(df3, aes(N, PerCapita, color = Model)) +
+        R <- ggplot(df, aes(N, PerCapita, color = Model)) +
             geom_hline(yintercept=0, color="darkgrey") +
             geom_line() +
-            geom_segment(data = df_points, aes(x=N, xend=lead(N),
-                                               y=PerCapita, yend=lead(PerCapita)),
-                         arrow=arrow(length = unit(2, "mm")),
-                         size=1/2, alpha = 1/2) +
+            geom_point(data=unique(filter(df, !is.na(LabTimes)))) +
+            geom_text_repel(data=unique(filter(df, !is.na(LabTimes))),
+                            aes(label=LabTimes),
+                            alpha=1/2,
+                            direction="y") +
             scale_x_continuous("N(t)", labels = comma,
                                lim=c(0,5000)) +
             scale_y_continuous("Per capita growth rate ([dN/dt]/N)",
                                labels = comma,
                                lim=c(-0.1, 0.5)) +
-            labs(caption = "Arrows show trajectory over time in 20 steps. (Not all may show up)")
+            labs(caption = "Labels are six time points along sequence. (Not all may show up)")
 
         grid.arrange(P, Q, R, ncol=1)
     })

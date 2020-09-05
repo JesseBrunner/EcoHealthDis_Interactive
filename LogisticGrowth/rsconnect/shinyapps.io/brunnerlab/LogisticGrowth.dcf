@@ -5,8 +5,8 @@ account: brunnerlab
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2631997
-bundleId: 3461349
+bundleId: 3596643
 url: https://brunnerlab.shinyapps.io/LogisticGrowth/
-when: 1596237241.36015
+when: 1599323598.52859
 asMultiple: FALSE
 asStatic: FALSE
