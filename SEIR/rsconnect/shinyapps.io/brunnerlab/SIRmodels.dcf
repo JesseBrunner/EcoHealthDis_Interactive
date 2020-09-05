@@ -5,8 +5,8 @@ account: brunnerlab
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2668649
-bundleId: 3518338
+bundleId: 3596677
 url: https://brunnerlab.shinyapps.io/SIRmodels/
-when: 1597460432.9322
+when: 1599324379.52513
 asMultiple: FALSE
 asStatic: FALSE

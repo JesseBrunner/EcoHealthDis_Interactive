@@ -228,9 +228,9 @@ ui <- fluidPage(
                         ),
 
                         tabPanel("Ebola outbreaks",
-                                 p("The cumulative cases of Ebola disease in two outbreaks. In both cases there was an intervention at some point in time."),
+                                 p("The cumulative cases of Ebola disease in two outbreaks. In both cases there was an intervention at some point in time that cut the transmission rate in half or to one third. (These are set for you.)"),
                                  p("See if you can get the SEIR model to fit this time series, visually."),
-                                 helpText("Note that the population sizes have been set for you. The case fatality rate does not affect the results and the vaccination fraction is set to zero."),
+                                 helpText("Note that the population sizes have been set for you. The case fatality rate does not affect the results (they are removed either way) and the vaccination fraction is set to zero."),
 
                                  tags$table(id = "actual-table",
                                             tags$tr(style = "width: 30%; text-align: right",
