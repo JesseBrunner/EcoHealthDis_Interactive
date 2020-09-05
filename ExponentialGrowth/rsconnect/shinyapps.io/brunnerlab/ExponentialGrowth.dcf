@@ -5,8 +5,8 @@ account: brunnerlab
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2631015
-bundleId: 3594693
+bundleId: 3594726
 url: https://brunnerlab.shinyapps.io/ExponentialGrowth/
-when: 1599258018.94295
+when: 1599258842.67706
 asMultiple: FALSE
 asStatic: FALSE

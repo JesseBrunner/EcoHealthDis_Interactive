@@ -186,7 +186,11 @@ server <- function(input, output) {
             mutate(y = Cumulative)
         if(input$yaxis == "logy") {
             df <- df %>%
-            mutate(y = log(Cumulative))
+            mutate(y = log10(Cumulative))
+        }
+        if(input$yaxis == "lny") {
+            df <- df %>%
+                mutate(y = log(Cumulative))
         }
 
         cutoff <- input$cutoff # choose cutoff
