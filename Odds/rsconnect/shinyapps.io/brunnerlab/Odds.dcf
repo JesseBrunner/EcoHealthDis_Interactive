@@ -1,0 +1,12 @@
+name: Odds
+title: Odds
+username:
+account: brunnerlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3053387
+bundleId: 3760689
+url: https://brunnerlab.shinyapps.io/Odds/
+when: 1603160925.12209
+asMultiple: FALSE
+asStatic: FALSE

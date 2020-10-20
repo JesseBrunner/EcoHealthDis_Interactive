@@ -1,0 +1,24 @@
+﻿Event,Odds,Per,Source
+Heart disease,0.166666667,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Cancer,0.142857143,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Chronic lower respiratory disease,0.038461538,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Suicide,0.011627907,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Opiod overdose,0.010204082,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Motor vehicle crash,0.009433962,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Fall,0.009009009,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Gun assault,0.003355705,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Pedeistrian incident,0.001848429,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Motorcyclist,0.001123596,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Drowning,0.000892061,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Fire or smoke,0.000714796,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Choking on food,0.000381971,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Bicyclist,0.000246305,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Sunstroke,0.0001287,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Gun accident,0.000110169,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+"Electrocution, radiation, temperatures",8.01E-05,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Sharp objects,3.39E-05,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Hot surfaces & substances,2.21E-05,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Stings,1.85E-05,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Cataclysmic storm,1.83E-05,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Dog attack,8.42E-06,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
+Lightning,5.53E-06,Lifetime,https://injuryfacts.nsc.org/all-injuries/preventable-death-overview/odds-of-dying/
