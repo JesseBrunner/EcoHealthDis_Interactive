@@ -1,0 +1,13 @@
+name: Payoff
+title: Payoff
+username:
+account: brunnerlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4647111
+bundleId: 5039830
+url: https://brunnerlab.shinyapps.io/Payoff/
+when: 1631807314.80051
+lastSyncTime: 1631807314.80052
+asMultiple: FALSE
+asStatic: FALSE

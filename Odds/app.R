@@ -34,7 +34,10 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-            plotOutput("distPlot", height = "600px")
+          p("Odds of each event per lifetime or per year in the U.S.A."),
+          helpText("The odds are calculated over the entire population, rather than by group engaged in particular activities, age groups, etc. So if, for instance, you do not skydive, your odds of dying by skydiving are zero."),
+          plotOutput("distPlot", height = "600px"),
+          helpText("Note that these are coming from various web sites, so take these values with a grain of salt.")
         )
     )
 )
@@ -82,6 +85,7 @@ server <- function(input, output) {
                )
                },
                "logy" = {P <- P+scale_y_log10(
+                 breaks = 1/(10^c(0:10)),
                    labels=label_math(1:.x,
                                      format = function(x){round(1/x)})
                )
