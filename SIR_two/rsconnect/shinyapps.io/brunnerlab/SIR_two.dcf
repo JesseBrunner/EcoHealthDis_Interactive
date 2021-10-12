@@ -1,0 +1,13 @@
+name: SIR_two
+title: SIR_two
+username:
+account: brunnerlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4854506
+bundleId: 5131814
+url: https://brunnerlab.shinyapps.io/SIR_two/
+when: 1634062886.93834
+lastSyncTime: 1634062886.93835
+asMultiple: FALSE
+asStatic: FALSE
