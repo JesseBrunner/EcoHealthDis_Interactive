@@ -87,7 +87,7 @@ ui <- fluidPage(
                   tabPanel("Intervening",
                            p("Imagine that somewhere along the time series there is an intervention that reduces \\(r\\) by half. See how changing when the intervention occurs changes the eventual population size. How important is this relative to changing \\(N_0\\)"),
                            sliderInput("t_intervene",
-                                       "An intervention cutting r in half starts at:",
+                                       "An intervention cutting r in half starts at time:",
                                        min = 5,
                                        max = 50,
                                        value = 50),
@@ -129,27 +129,39 @@ server <- function(input, output) {
   output$expPlot <- renderPlot({
     df <- makeDF(input$r, 10^input$n0, input$t_intervene)
 
-    P <- ggplot(df, aes(Time, N)) +
-      geom_line() +
-      geom_point(data=tibble(Time=40, N=10^5))+
-      coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
-
-    # get the right y-axis
     switch(input$yaxis,
-           "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
-           "logy" = {P <- P+
-             scale_y_log10("N(t)", labels = label_comma(accuracy=1),
-                           breaks = 10^c(0:15))},
-           "lny" = {P <- P + scale_y_continuous("N(t)",
-                                                trans = log_trans(),
-                                                labels = label_comma(accuracy=1),
-                                                breaks = 10^c(0:15))}
+           "liny" = {P <- ggplot(df, aes(Time, N)) +
+             geom_line() +
+             geom_point(data=tibble(Time=40, N=10^5))+
+             scale_y_continuous("N(t)",
+                                labels = label_comma(accuracy=1),
+                                sec.axis = dup_axis())
+           },
+           "logy" = {P <- ggplot(df, aes(Time, log10(N))) +
+             geom_line() +
+             geom_point(data=tibble(Time=40, N=5))+
+             scale_y_continuous(expression(log[10](~"N(t)")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis(breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ 10^.))
+           },
+           "lny" = {P <- ggplot(df, aes(Time, log(N))) +
+             geom_line() +
+             geom_point(data=tibble(Time=40, N=log(10^5)))+
+             scale_y_continuous(expression(ln(~"N(t)")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis(breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ exp(.)))
+           }
     )
     plot(P)
   })
 
   output$expTable <- renderTable({
     df <- makeDF(input$r, 10^input$n0, input$t_intervene)
+    df <- df[,1:2]
     # format table to use commas in numbers
     df$N <- comma(df$N, accuracy = 0.1)
     arrange( df, desc(Time))
@@ -160,22 +172,37 @@ server <- function(input, output) {
   output$intPlot <- renderPlot({
     df <- makeDF(input$r, 10^input$n0, input$t_intervene)
 
-    P <- ggplot(df, aes(Time, N)) +
-      geom_line() +
-      geom_line(aes(y=N_intervention), color = "blue") +
-      geom_point(data=tibble(Time=40, N=10^5))+
-      coord_cartesian(ylim=c(1, max(10^5, max(df$N)) ))
-
-    # get the right y-axis
     switch(input$yaxis,
-           "liny" = {P <- P+scale_y_continuous("N(t)", labels = label_comma(accuracy=1))},
-           "logy" = {P <- P+
-             scale_y_log10("N(t)", labels = label_comma(accuracy=1),
-                           breaks = 10^c(0:15))},
-           "lny" = {P <- P + scale_y_continuous("N(t)", trans = log_trans(),
-                                                labels = label_comma(accuracy=1),
-                                                breaks = 10^c(0:15))}
+           "liny" = {P <- ggplot(df, aes(Time, N)) +
+             geom_line() +
+             geom_line(aes(y=N_intervention), color = "blue") +
+             geom_point(data=tibble(Time=40, N=10^5))+
+             scale_y_continuous("N(t)",
+                                labels = label_comma(accuracy=1),
+                                sec.axis = dup_axis())
+           },
+           "logy" = {P <- ggplot(df, aes(Time, log10(N))) +
+             geom_line() +
+             geom_line(aes(y=log10(N_intervention)), color = "blue") +
+             geom_point(data=tibble(Time=40, N=5))+
+             scale_y_continuous(expression(log[10](~"N(t)")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis(breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ 10^.))
+           },
+           "lny" = {P <- ggplot(df, aes(Time, log(N))) +
+             geom_line() +
+             geom_line(aes(y=log(N_intervention)), color = "blue") +
+             geom_point(data=tibble(Time=40, N=log(10^5)))+
+             scale_y_continuous(expression(ln(~"N(t)")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis(breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ exp(.)))
+           }
     )
+
     plot(P)
   })
 
@@ -218,7 +245,7 @@ server <- function(input, output) {
 
 
 
-    P <- ggplot(df, aes(x=Day, y=Cumulative)) +
+    P <- ggplot(df, aes(x=Day, y=y)) +
       geom_point() +
       geom_smooth(method="lm",
                   data=filter(df, Day <= cutoff),
@@ -226,7 +253,7 @@ server <- function(input, output) {
       geom_smooth(method="lm",
                   data=filter(df, Day <= cutoff)) +
       scale_x_continuous("Days since first case", breaks = 10*0:16) +
-      annotate("text", x=10, y=max(df$Cumulative),
+      annotate("text", x=10, y=max(df$y),
                label = bquote(slope == .(regr[1]) %+-% .(regr[2])), hjust=0 )
 
     # get the right y-axis
@@ -234,19 +261,24 @@ server <- function(input, output) {
            "liny" = {P <- P +
              scale_y_continuous("Cumulative number of cases",
                                 labels = label_comma(accuracy=1),
-                                limits=c(0, max(df$Cumulative)*1.2)
+                                sec.axis = dup_axis()
              )},
            "logy" = {P <- P +
-             scale_y_log10("Cumulative number of cases",
-                           labels = label_comma(accuracy=1),
-                           breaks = 10^c(0:15),
-                           limits=c(1, max(df$Cumulative)*3)
+             scale_y_continuous(expression(log[10]~("Cumulative number of cases")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis("Cumulative number of cases",
+                                                    breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ 10^.)
              )},
-           "lny" = {P <- P + scale_y_continuous("Cumulative number of cases",
-                                                trans = log_trans(),
-                                                labels = label_comma(accuracy=1),
-                                                breaks = 10^c(0:15),
-                                                limits=c(1, max(df$Cumulative)*3))}
+           "lny" = {P <- P +
+             scale_y_continuous(expression(ln~("Cumulative number of cases")),
+                                labels = label_comma(accuracy=1),
+                                sec.axis = sec_axis("Cumulative number of cases",
+                                                    breaks = 10^(0:15),
+                                                    labels = label_comma(accuracy=1),
+                                                    trans = ~ exp(.))
+             )}
     )
 
     plot(P)
